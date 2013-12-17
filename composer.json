@@ -1,0 +1,19 @@
+{
+    "name": "evoucher/ember-table",
+    "type":        "library",
+    "description": "Table built using Ember.js that lazily renders rows",
+    "keywords":    ["ember", "table"],
+    "homepage":    "https://github.com/evoucher/ember-table",
+    "license":     "MIT",
+    "authors": [
+        {
+            "name": "Addepar",
+            "homepage": "https://github.com/Addepar"
+        },
+        {
+            "name": "Contributors",
+            "homepage": "https://github.com/Addepar/ember-table/contributors"
+        }
+    ],
+    "target-dir": "evoucher/ember-table"
+}
