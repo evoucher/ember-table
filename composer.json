@@ -14,6 +14,5 @@
             "name": "Contributors",
             "homepage": "https://github.com/Addepar/ember-table/contributors"
         }
-    ],
-    "target-dir": "evoucher/ember-table"
+    ]
 }
