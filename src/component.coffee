@@ -6,8 +6,9 @@
 Ember.Table.EmberTableComponent =
 Ember.Component.extend Ember.AddeparMixins.StyleBindingsMixin,
 Ember.AddeparMixins.ResizeHandlerMixin,
-  templateName:   'components/ember-table'
+  layoutName:   'components/ember-table'
   classNames:     ['ember-table-tables-container']
+  classNameBindings: ['enableContentSelection:ember-table-content-selectable']
   styleBindings:  ['height']
   height:         Ember.computed.alias '_tablesContainerHeight'
 
@@ -35,6 +36,8 @@ Ember.AddeparMixins.ResizeHandlerMixin,
   forceFillColumns: no
 
   enableColumnReorder: yes
+
+  enableContentSelection: no
 
   selection: null
 
