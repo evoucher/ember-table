@@ -125,7 +125,6 @@ Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
   styleBindings:      'width'
   row:        Ember.computed.alias 'parentView.row'
   column:     Ember.computed.alias 'content'
-  rowContent: Ember.computed.alias 'row.content'
   width:      Ember.computed.alias 'column.columnWidth'
 
   init: ->
@@ -139,13 +138,13 @@ Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
   contentPathWillChange: (->
     contentPath = @get 'column.contentPath'
     if contentPath
-      @removeObserver("rowContent.#{contentPath}", this, this.contentDidChange)
+      @removeObserver("row.#{contentPath}", this, this.contentDidChange)
   ).observesBefore 'column.contentPath'
 
   contentPathDidChange: (->
     contentPath = this.get 'column.contentPath'
     if contentPath
-      @addObserver("rowContent.#{contentPath}", this, this.contentDidChange)
+      @addObserver("row.#{contentPath}", this, this.contentDidChange)
   ).observesBefore 'column.contentPath'
 
   ###*
@@ -154,7 +153,7 @@ Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
   * @instance
   ###
   cellContent: Ember.computed (key, value) ->
-    row     = @get 'rowContent'
+    row     = @get 'row'
     column  = @get 'column'
     return unless row and column
     if arguments.length is 1
@@ -162,7 +161,7 @@ Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
     else
       column.setCellContent row, value
     value
-  .property 'rowContent.isLoaded', 'column'
+  .property 'row.isLoaded', 'column'
 
 ################################################################################
 
@@ -217,7 +216,7 @@ Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
     opacity: 0.9
     placeholder: 'ui-state-highlight'
     scroll: true
-    tolerance: 'pointer'
+    tolerance: 'intersect'
     update: jQuery.proxy(@onColumnSortDone,   this)
     stop:   jQuery.proxy(@onColumnSortStop,   this)
     sort:   jQuery.proxy(@onColumnSortChange, this)
@@ -303,6 +302,12 @@ Ember.View.extend Ember.AddeparMixins.StyleBindingsMixin,
   ###
   onColumnResize: (event, ui) ->
     @elementSizeDidChange()
+    # Special case for force-filled columns: if this is the last column you
+    # resize (or the only column), then it will be reset to before the resize
+    # to preserve the table's force-fill property.
+    if @get('controller.forceFillColumns') and
+        @get('controller.columns').filterProperty('canAutoResize').length > 1
+      @set('column.canAutoResize', false)
     @get("column").resize(ui.size.width)
 
   elementSizeDidChange: ->

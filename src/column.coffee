@@ -26,10 +26,14 @@ Ember.Table.ColumnDefinition = Ember.Object.extend
   textAlign: 'text-align-right'
   canAutoResize: yes
 
+  # TODO: eliminate view aliases
   # The view class we want to use for the header
-  headerCellViewClass:  'Ember.Table.HeaderCell'
+  headerCellView:       'Ember.Table.HeaderCell'
+  headerCellViewClass:  Ember.computed.alias 'headerCellView'
+
   # The view class we want to use for the table cells
-  tableCellViewClass:   'Ember.Table.TableCell'
+  tableCellView:        'Ember.Table.TableCell'
+  tableCellViewClass:   Ember.computed.alias 'tableCellView'
 
   resize: (width) -> @set 'columnWidth', width
 
@@ -73,9 +77,11 @@ Ember.Table.Row = Ember.ObjectProxy.extend
   * @member {Boolean} isSelected
   * @instance
   ###
-  isSelected: Ember.computed ->
-    @get('parentController.selection') is @get('content')
-  .property 'parentController.selection', 'content'
+  isSelected: Ember.computed (key, val) ->
+    if arguments.length > 1
+      @get('parentController').setSelected this, val
+    @get('parentController').isSelected this
+  .property 'parentController._selection.[]'
 
   ###*
   * Is Showing?

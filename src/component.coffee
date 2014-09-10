@@ -39,10 +39,45 @@ Ember.AddeparMixins.ResizeHandlerMixin,
 
   enableContentSelection: no
 
-  selection: null
+  # rows that were selected directly or as part of a previous
+  # range selection (shift-click)
+  persistedSelection: Ember.computed -> new Ember.Set()
 
+  # rows that are part of the currently editable range selection
+  rangeSelection: Ember.computed -> new Ember.Set()
+
+  selectionMode: 'single'
+
+  _selection: Ember.computed ->
+    @get('persistedSelection').copy().addEach(@get('rangeSelection'))
+  .property 'persistedSelection.[]', 'rangeSelection.[]'
+
+  selection: Ember.computed (key, val) ->
+    if arguments.length > 1 and val
+      if @get('selectionMode') is 'single'
+        @get('persistedSelection').clear()
+        @get('persistedSelection').add(@findRow val)
+      else
+        @get('persistedSelection').clear()
+        for content in val
+          @get('persistedSelection').add(@findRow content)
+      @get('rangeSelection').clear()
+    if @get('selectionMode') is 'single'
+      return @get('_selection')?[0]?.get('content')
+    else
+      return @get('_selection').toArray().map (row) -> row.get('content')
+  .property '_selection.[]', 'selectionMode'
+
+  # TODO: eliminate view alias
   # specify the view class to use for rendering the table rows
-  tableRowViewClass: 'Ember.Table.TableRow'
+  tableRowView:      'Ember.Table.TableRow'
+  tableRowViewClass: Ember.computed.alias 'tableRowView'
+
+  init: ->
+    @_super()
+    if !$.ui then throw 'Missing dependency: jquery-ui'
+    if !$().mousewheel then throw 'Missing dependency: jquery-mousewheel'
+    if !$().antiscroll then throw 'Missing dependency: antiscroll.js'
 
   actions:
     addColumn: Ember.K
@@ -146,7 +181,7 @@ Ember.AddeparMixins.ResizeHandlerMixin,
   updateLayout: ->
     # updating antiscroll
     return unless @get('state') is 'inDOM'
-    this.$('.antiscroll-wrap').antiscroll()
+    this.$('.antiscroll-wrap').antiscroll().data('antiscroll').rebuild();
     @doForceFillColumns() if @get('forceFillColumns')
 
   doForceFillColumns: ->
@@ -154,16 +189,14 @@ Ember.AddeparMixins.ResizeHandlerMixin,
     totalWidth = @get '_width'
     fixedColumnsWidth = @get '_fixedColumnsWidth'
     tableColumns = @get 'tableColumns'
-    defaultContentWidth = @_getTotalWidth tableColumns, 'defaultColumnWidth'
+    contentWidth = @_getTotalWidth tableColumns
     availableContentWidth = totalWidth - fixedColumnsWidth
-    if defaultContentWidth < availableContentWidth
-      remainingWidth = availableContentWidth - defaultContentWidth
-      numColumnToDistributeWidth = tableColumns.filterProperty('canAutoResize').length
-      additionWidthPerColumn = Math.floor(remainingWidth / numColumnToDistributeWidth)
-      tableColumns.forEach (column) ->
-        if column.get('canAutoResize')
-          columnWidth = column.get('defaultColumnWidth') + additionWidthPerColumn
-          column.set 'columnWidth', columnWidth
+    remainingWidth = availableContentWidth - contentWidth
+    columnsToResize = tableColumns.filterProperty('canAutoResize')
+    additionWidthPerColumn = Math.floor(remainingWidth / columnsToResize.length)
+    columnsToResize.forEach (column) ->
+      columnWidth = column.get('columnWidth') + additionWidthPerColumn
+      column.set 'columnWidth', columnWidth
 
   onBodyContentLengthDidChange: Ember.observer ->
     Ember.run.next this, -> Ember.run.once this, @updateLayout
@@ -349,10 +382,58 @@ Ember.AddeparMixins.ResizeHandlerMixin,
   ##############################################################################
   # selection
   ##############################################################################
+
+  isSelected: (row) ->
+    @get('_selection').contains row
+
+  setSelected: (row, val) ->
+    @persistSelection()
+    if val
+      @get('persistedSelection').add row
+    else
+      @get('persistedSelection').remove row
+
   click: (event) ->
     row = @getRowForEvent event
     return unless row
-    @set 'selection', row.get('content')
+    return if @get('selectionMode') is 'none'
+    if @get('selectionMode') is 'single'
+      @get('persistedSelection').clear()
+      @get('persistedSelection').add row
+    else
+      if event.shiftKey
+        @get('rangeSelection').clear()
+
+        lastIndex = @rowIndex(@get('lastSelected'))
+        curIndex  = @rowIndex(@getRowForEvent(event))
+
+        minIndex  = Math.min(lastIndex, curIndex)
+        maxIndex  = Math.max(lastIndex, curIndex)
+
+        @get('rangeSelection').addObjects @get('bodyContent').slice(minIndex, maxIndex + 1)
+      else
+        if !event.ctrlKey && !event.metaKey
+          @get('persistedSelection').clear()
+          @get('rangeSelection').clear()
+        else
+          @persistSelection()
+        if @get('persistedSelection').contains row
+          @get('persistedSelection').remove row
+        else
+          @get('persistedSelection').add row
+        @set('lastSelected', row)
+
+  findRow: (content) ->
+    for row in @get('bodyContent')
+      if row.get('content') is content
+        return row
+
+  rowIndex: (row) ->
+    @get('bodyContent')?.indexOf(row)
+
+  persistSelection: () ->
+    @get('persistedSelection').addEach(@get('rangeSelection'))
+    @get('rangeSelection').clear()
 
   getRowForEvent: (event) ->
     $rowView = $(event.target).parents('.ember-table-table-row')

@@ -85,7 +85,6 @@ App.FinancialTableComponent = Ember.Table.EmberTableComponent.extend
   # custom properties
   sortAscending: no
   sortColumn: null
-  selection: null
 
   actions:
     toggleTableCollapse: (event) ->
@@ -116,7 +115,7 @@ App.FinancialTableComponent = Ember.Table.EmberTableComponent.extend
         headerCellViewClass:  'App.FinancialTableHeaderCell'
         tableCellViewClass:   'App.FinancialTableCell'
         getCellContent: (row) ->
-          object = row.values[@get('index')]
+          object = row.get('values')[@get('index')]
           return object.value.toCurrency() if object.type is 'money'
           return object.value.toPercent()  if object.type is 'percent'
           "-"
